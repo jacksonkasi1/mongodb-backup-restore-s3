@@ -25,7 +25,7 @@ Before you start, you need to set the following environment variables in your `.
 - `AWS_SECRETKEY`: Your AWS secret access key.
 - `S3_BUCKET_NAME`: The name of your AWS S3 bucket for the backups.
 - `REGION`: The AWS region where your S3 bucket is located.
-- `BACKUP_DB_URL`: The Postgres database URL for the backup.
+- `MONGODB_URI`: The MongoDB database URL for the backup.
 
 ## Running the application
 
@@ -77,7 +77,7 @@ The server will automatically backup the database every day at 5 AM using a cron
 
 ## Notes
 
-- This application assumes you have PostgreSQL (pg_dump) installed and configured on your system.
+- This application assumes you have MongoDBQL (pg_dump) installed and configured on your system.
 - Restore api commend does not execute on windows system. We recommend that you utilise the Linux operating system.
 - It's recommended to set up proper security measures for handling AWS credentials and environment variables.
 
