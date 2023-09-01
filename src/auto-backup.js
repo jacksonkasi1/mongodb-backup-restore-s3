@@ -15,6 +15,10 @@ async function performBackup() {
   try {
     const { MONGODB_URI, S3_BUCKET_NAME } = process.env;
 
+    if (!MONGODB_URI || !S3_BUCKET_NAME) {
+      throw new Error("Missing environment variables");
+    }
+
     const fileName = `backup_${Date.now()}`;
     const filePath = path.join(__dirname, fileName);
 
