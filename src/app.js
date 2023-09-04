@@ -1,6 +1,5 @@
 const fs = require("fs");
 const path = require("path");
-const url = require("url");
 
 const { exec } = require("child_process");
 const AWS = require("aws-sdk");
@@ -18,54 +17,48 @@ const s3 = new AWS.S3({
 // NORMAL WAY
 app.get("/api/backup", async (req, res) => {
   try {
-    const { folder, dbUrl } = req.query;
+    const { dbUrl } = req.query;
 
+    const backupFolder = "DB";
+    const fileName = `backup_${Date.now()}.dump`;
 
-    const fileName = `backup_${Date.now()}.dump`; // Generate a unique file name
-    const filePath = path.join(__dirname, "../" + fileName);
+    if (!fs.existsSync(path.join(__dirname, backupFolder))) {
+      await fs.promises.mkdir(path.join(__dirname, backupFolder));
+    }
+
+    const filePath = path.join(__dirname, backupFolder, fileName);
+
+    console.log({ filePath });
 
     console.log("Backup Process started...");
 
-    // const command = `mongodump --forceTableScan --out=${filePath} --uri=${dbUrl}`;
-    const command = `mongodump --uri="${dbUrl}" --archive="${filePath}.dump"`
+    const command = `mongodump --uri="${dbUrl}" --archive="${filePath}.dump"`;
+    require('child_process').execSync(command);
 
-    exec(
-      command,
-      { maxBuffer: 1024 * 1024 * 5000 },
-      async (error, stdout, stderr) => {
-        if (error) {
-          console.error(`exec error: ${error}`);
-          return res.status(500).send(`exec error: ${error}`);
-        }
+    const data = await fs.promises.readFile(`${filePath}.dump`);
 
+    const params = {
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: fileName,
+      Body: data,
+      ContentType: "application/octet-stream",
+      ContentDisposition: `DB Backup file ${fileName} and time = ${Date.now()}`,
+    };
 
-        const data = await fs.promises.readFile(filePath);
+    const uploadResult = await s3.upload(params).promise();
 
-        const fileLocation = folder ? `${folder}/${fileName}` : fileName;
+    console.log(`Backup uploaded successfully to ${process.env.S3_BUCKET_NAME}/${fileName}`);
 
-        const params = {
-          Bucket: process.env.S3_BUCKET_NAME,
-          Key: fileLocation,
-          Body: data,
-          ContentType: "application/octet-stream",
-          ContentDisposition: `DB Backup file ${fileLocation} and time = ${Date.now()}`,
-        };
+    await fs.promises.unlink(`${filePath}.dump`);
+    console.log("File deleted");
 
-        const uploadResult = await s3.upload(params).promise();
+    const location = uploadResult.Location;
 
-        console.log(`Backup uploaded successfully to ${process.env.S3_BUCKET_NAME}/${fileName}`);
-        await fs.promises.unlink(filePath);
-        console.log("File deleted");
-
-        const location = uploadResult.Location;
-
-        res.status(200).json({
-          success: true,
-          message: `Backup uploaded successfully to ${location}`,
-          location,
-        });
-      }
-    );
+    res.status(200).json({
+      success: true,
+      message: `Backup uploaded successfully to ${location}`,
+      location,
+    });
   } catch (err) {
     console.error(`Error: ${err}`);
     res.status(500).json({
@@ -74,6 +67,7 @@ app.get("/api/backup", async (req, res) => {
     });
   }
 });
+
 
 app.get("/api/restore", async (req, res) => {
   const { dbUrl, key } = req.query;
@@ -97,7 +91,8 @@ app.get("/api/restore", async (req, res) => {
     }
 
     // Write the backup file to the local file system
-    await fs.writeFile(filePath, response.Body);
+    // await fs.writeFile(filePath, response.Body);
+    await fs.promises.writeFile(filePath, response.Body);
     console.log("Database backup file downloaded successfully!");
 
     // Restoring the database
