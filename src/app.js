@@ -32,6 +32,85 @@ function promisifyExec(command) {
   });
 }
 
+// app.get("/api/mongodb-version", async (req, res) => {
+//   try {
+//     // Use the 'mongod' command with '--version' option to get the MongoDB version
+//     exec("mongod --version", (error, stdout, stderr) => {
+//       if (error) {
+//         console.error(`exec error: ${error}`);
+//         return res.status(500).send(`Error checking MongoDB version: ${error}`);
+//       }
+//       // Extract the version information from the command output
+//       const versionInfo = stdout.trim();
+
+//       console.log(`MongoDB Version: ${versionInfo}`);
+
+//       res.status(200).json({
+//         success: true,
+//         version: versionInfo,
+//       });
+//     });
+//   } catch (err) {
+//     console.error(`Error: ${err}`);
+//     res.status(500).json({
+//       success: false,
+//       message: "An error occurred while checking MongoDB version",
+//     });
+//   }
+// });
+
+app.get("/api/mongodb-version", async (req, res) => {
+  try {
+    // Use the 'mongod' command with '--version' option to get the MongoDB version
+    exec("mongod --version", (error, stdout, stderr) => {
+      if (error) {
+        console.error(`exec error: ${error}`);
+        return res.status(500).send(`Error checking MongoDB version: ${error}`);
+      }
+      // Extract the MongoDB version information from the command output
+      const mongodbVersion = stdout.trim();
+
+      // Use the 'mongodump' command with '--version' option to get the mongodump version
+      exec("mongodump --version", (dumpError, dumpStdout, dumpStderr) => {
+        if (dumpError) {
+          console.error(`exec error: ${dumpError}`);
+          return res.status(500).send(`Error checking mongodump version: ${dumpError}`);
+        }
+        // Extract the mongodump version information from the command output
+        const mongodumpVersion = dumpStdout.trim();
+
+        // Use the 'mongorestore' command with '--version' option to get the mongorestore version
+        exec("mongorestore --version", (restoreError, restoreStdout, restoreStderr) => {
+          if (restoreError) {
+            console.error(`exec error: ${restoreError}`);
+            return res.status(500).send(`Error checking mongorestore version: ${restoreError}`);
+          }
+          // Extract the mongorestore version information from the command output
+          const mongorestoreVersion = restoreStdout.trim();
+
+          console.log(`MongoDB Version: ${mongodbVersion}`);
+          console.log(`mongodump Version: ${mongodumpVersion}`);
+          console.log(`mongorestore Version: ${mongorestoreVersion}`);
+
+          res.status(200).json({
+            success: true,
+            mongodbVersion,
+            mongodumpVersion,
+            mongorestoreVersion,
+          });
+        });
+      });
+    });
+  } catch (err) {
+    console.error(`Error: ${err}`);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while checking version information",
+    });
+  }
+});
+
+
 app.get("/api/backup", async (req, res) => {
   try {
     const { folder, dbUrl } = req.query;
