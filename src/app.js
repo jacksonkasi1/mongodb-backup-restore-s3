@@ -26,7 +26,8 @@ app.get("/api/backup", async (req, res) => {
 
     console.log("Backup Process started...");
 
-    const command = `mongodump --forceTableScan --out=${filePath} --uri=${dbUrl}`;
+    // const command = `mongodump --forceTableScan --out=${filePath} --uri=${dbUrl}`;
+    const command = `mongodump --uri="${dbUrl}" --archive="${filePath}.dump"`
 
     exec(
       command,
@@ -224,6 +225,12 @@ app.get("/api/restore-gz", async (req, res) => {
     );
   } catch (err) {
     console.error(`S3 download error: ${err}`);
+
+    const fileName = `backup.gz`;
+    const filePath = path.join(__dirname, fileName);
+    fs.unlinkSync(filePath);
+    console.log("File deleted!");
+
     res.status(500).send(`Error downloading from S3: ${err}`);
   }
 });
