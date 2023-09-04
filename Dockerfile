@@ -1,27 +1,29 @@
-# Use an official MongoDB Docker image as base
-FROM mongo:latest
-
-# Set MongoDB to run in the background
-RUN echo "mongod --fork --logpath /var/log/mongodb.log" >> /root/.bashrc
+# Use an official Ubuntu runtime as the base image
+FROM ubuntu:20.04
 
 # Set the working directory in the Docker container to /app
 WORKDIR /app
 
-# Install curl and procps (provides free command),
-RUN apt-get update && apt-get install -y curl procps
+# Install necessary dependencies
+RUN apt-get update \
+    && apt-get install -y gnupg wget curl
 
-# Install MongoDB Database Tools
-RUN curl -OL https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-arm64-100.8.0.deb && \
-    dpkg -i mongodb-database-tools-ubuntu2004-arm64-100.8.0.deb && \
-    apt-get install -f && rm mongodb-database-tools-ubuntu2004-arm64-100.8.0.deb
+# Import the MongoDB public GPG key and add the MongoDB repository into sources list    
+RUN wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - \
+    && echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list
 
-# Use an official Node.js runtime as the base image
-FROM node:18
+# Update source list and install MongoDB
+RUN apt-get update \
+    && apt-get install -y mongodb-org
 
-# Set the working directory in the Docker container to /app
-WORKDIR /app
+# Install Node.js 18.x
+RUN curl -sL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs
 
-# Copy the application's source code to the working directory
+# Install NPM
+RUN npm install -g npm@latest
+
+# Copy your application files into the Docker image
 COPY . .
 
 # Install the application's dependencies inside the Docker image
